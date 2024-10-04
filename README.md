@@ -22,8 +22,17 @@ npm install
 Configure seu projeto
 
 ```
-firebase functions:config:set contaazul.client_id="YOUR_CLIENT_ID" contaazul.client_secret="YOUR_CLIENT_SECRET"
-contaazul.redirect_uri="YOUR_REDIRECT_URI" contaazul.brl_account_id="CONTA_FINANCEIRA_BRL_ID" contaazul.usd_account_id="CONTA_FINANCEIRA_USD_ID"
+firebase functions:config:set contaazul.client_id="YOUR_CLIENT_ID" \
+contaazul.client_secret="YOUR_CLIENT_SECRET" \
+contaazul.redirect_uri="YOUR_REDIRECT_URI" \
+contaazul.brl_account_id="CONTA_FINANCEIRA_BRL_ID" \
+contaazul.usd_account_id="CONTA_FINANCEIRA_USD_ID" \
+default_zipcode="12123-100"
+default_street="Rua Padrão"
+default_number="1"
+default_neighborhood="Bairro Padrão"
+default_city="São Paulo"
+default_state="SP"
 ```
 
 Deploy

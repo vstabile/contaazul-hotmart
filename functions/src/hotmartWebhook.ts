@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import axios from "axios";
-import { generateCPF } from "./utils";
+import { validateCPF, validateCNPJ, generateCPF } from "./utils";
 
 const db = admin.firestore();
 const tokensCollection = db.collection("oauth_tokens");
@@ -30,6 +30,13 @@ const client_id = functions.config().contaazul.client_id;
 const client_secret = functions.config().contaazul.client_secret;
 const brl_account_id = functions.config().contaazul.brl_account_id;
 const usd_account_id = functions.config().contaazul.usd_account_id;
+
+const default_zipcode = functions.config().default_address.zipcode;
+const default_street = functions.config().default_address.street;
+const default_number = functions.config().default_address.number;
+const default_neighborhood = functions.config().default_address.neighborhood;
+const default_city = functions.config().default_address.city;
+const default_state = functions.config().default_address.state;
 
 // Webhook endpoint to receive Hotmart webhooks
 export const hotmartWebhook = functions.https.onRequest(async (req, res) => {
@@ -229,7 +236,9 @@ async function getCustomerIdFromBuyer(
   }
 
   // Create a new customer when none is found
-  const document = buyer.document?.replace(/\D+/g, "") || generateCPF();
+  let document = buyer.document?.replace(/\D+/g, "");
+  if (!validateCPF(document) && !validateCNPJ(document))
+    document = generateCPF();
 
   const newCustomerData = {
     name: buyer.name,
@@ -238,13 +247,13 @@ async function getCustomerIdFromBuyer(
     person_type: document.length > 11 ? "LEGAL" : "NATURAL",
     business_phone: buyer.checkout_phone,
     address: {
-      zip_code: buyer.address?.zipcode || "13560-180",
-      street: buyer.address?.address || "Rua Sete de Setembro",
-      number: buyer.address?.number || "1257",
+      zip_code: buyer.address?.zipcode || default_zipcode,
+      street: buyer.address?.address || default_street,
+      number: buyer.address?.number || default_number,
       complement: buyer.address?.complement || "",
-      neighborhood: buyer.address?.neighborhood || "",
-      city: buyer.address?.city || "São Carlos",
-      state: buyer.address?.state || "SP",
+      neighborhood: buyer.address?.neighborhood || default_neighborhood,
+      city: buyer.address?.city || default_city,
+      state: buyer.address?.state || default_state,
     },
   };
 
