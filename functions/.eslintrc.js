@@ -23,11 +23,20 @@ module.exports = {
   ],
   plugins: ["@typescript-eslint", "import"],
   rules: {
-    quotes: ["error", "double"],
+    quotes: ["error", "double", { allowTemplateLiterals: true }],
     "import/no-unresolved": 0,
     indent: ["error", 2],
     "object-curly-spacing": ["off"],
-    "max-len": ["error", { code: 150 }],
+    "max-len": [
+      "error",
+      {
+        code: 150,
+        ignoreComments: true,
+        ignoreUrls: true,
+        ignoreStrings: true,
+        ignoreTemplateLiterals: true,
+      },
+    ],
     "require-jsdoc": ["off"],
     "quote-props": ["off"],
     camelcase: ["off"],

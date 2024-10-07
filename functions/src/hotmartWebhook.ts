@@ -26,10 +26,21 @@ const PAYMENT_METHODS = {
   CASH_PAYMENT: "CASH",
 };
 
-const client_id = functions.config().contaazul.client_id;
-const client_secret = functions.config().contaazul.client_secret;
+// Hotmart configs
+// const hotmart_client_id = functions.config().hotmart.client_id;
+// const hotmart_client_secret = functions.config().hotmart.client_secret;
+// const hotmart_basic_token = functions.config().hotmart.basic_token;
+
+// Conta Azul configs
+const conta_azul_client_id = functions.config().contaazul.client_id;
+const conta_azul_client_secret = functions.config().contaazul.client_secret;
 const brl_account_id = functions.config().contaazul.brl_account_id;
 const usd_account_id = functions.config().contaazul.usd_account_id;
+// const affiliate_service_id = functions.config().contaazul.affiliate_service_id;
+// const payment_service_id = functions.config().contaazul.payment_service_id;
+// const streaming_service_id = functions.config().contaazul.streaming_service_id;
+// const installment_service_id =
+//   functions.config().contaazul.installment_service_id;
 
 const default_zipcode = functions.config().default_address.zipcode;
 const default_street = functions.config().default_address.street;
@@ -49,11 +60,85 @@ export const hotmartWebhook = functions.https.onRequest(async (req, res) => {
     }
 
     // Extract necessary information from Hotmart webhook
+    // const { product, buyer, purchase, commissions } = webhookData.data;
     const { product, buyer, purchase } = webhookData.data;
-    // const { product, buyer, affiliates, commissions, purchase } =
-    //   webhookData.data;
 
-    const accessToken = await getAccessToken();
+    // Exchange rate applied to customers currency
+    let purchase_exchange_rate = 1;
+    if (purchase.price.currency_value !== "BRL") {
+      purchase_exchange_rate =
+        purchase.original_offer_price.value / purchase.price.value;
+    }
+
+    // Exchange rate applied to costs (USDBRL when foreign currency)
+    // let costs_exchange_rate = 1;
+    // if (purchase.price.currency_value !== "BRL") {
+    //   costs_exchange_rate = commissions.find(
+    //     (item: any) => item.source === "PRODUCER"
+    //   )?.currency_conversion?.conversion_rate;
+    // }
+
+    // Get sales commission breakdown from Hotmart
+    // const otherCommissions = await getSalesCommissions(purchase.transaction);
+
+    // const costs = [
+    //   {
+    //     service_id: payment_service_id,
+    //     quantity: 1,
+    //     value:
+    //       commissions.find((item: any) => item.source === "MARKETPLACE").value *
+    //       costs_exchange_rate,
+    //   },
+    //   ...otherCommissions.items[0].commissions
+    //     .map((item: any) => {
+    //       if (item.source === "AFFILIATE") {
+    //         return {
+    //           service_id: affiliate_service_id,
+    //           quantity: 1,
+    //           value: item.commission.value * costs_exchange_rate,
+    //           description: `Afiliado: ${item.user.name}`,
+    //         };
+    //       } else if (item.source === "ADDON") {
+    //         return {
+    //           service_id: streaming_service_id,
+    //           quantity: 1,
+    //           value: item.commission.value * costs_exchange_rate,
+    //           description: "Taxa de streaming",
+    //         };
+    //       } else {
+    //         return null;
+    //       }
+    //     })
+    //     .filter((item: any) => item !== null),
+    // ];
+
+    const accessToken = await getContaAzulAccessToken();
+
+    const services = [
+      {
+        service_id: await getServiceIdFromProduct(
+          product,
+          purchase,
+          accessToken
+        ),
+        quantity: 1,
+        value: purchase.full_price.value * purchase_exchange_rate,
+      },
+      // ...costs,
+    ];
+
+    // Calculate installment costs
+    // const other_costs = costs.reduce((acc: number, item: any) => {
+    //   return acc + item.value;
+    // });
+
+    // if (services[0].value - other_costs > 0) {
+    //   services.push({
+    //     service_id: installment_service_id,
+    //     quantity: 1,
+    //     value: services[0].value - other_costs,
+    //   });
+    // }
 
     const due_date = [
       "PIX",
@@ -69,17 +154,7 @@ export const hotmartWebhook = functions.https.onRequest(async (req, res) => {
       emission: new Date(Number(purchase.order_date)).toISOString(),
       status: "COMMITTED",
       customer_id: await getCustomerIdFromBuyer(buyer, accessToken),
-      services: [
-        {
-          quantity: 1,
-          service_id: await getServiceIdFromProduct(
-            product,
-            purchase,
-            accessToken
-          ),
-          value: purchase.full_price.value,
-        },
-      ],
+      services: [services[0]], // TODO: Figure out how to account for transaction costs
       notes: `Identificador transação Hotmart: ${purchase.transaction}`,
       payment: {
         type: "CASH",
@@ -113,7 +188,24 @@ export const hotmartWebhook = functions.https.onRequest(async (req, res) => {
   }
 });
 
-// Helper function to create a new service sale in Conta Azul
+// Get sales commissions information from Hotmart
+// async function getSalesCommissions(transaction: string): Promise<any> {
+//   const token = await getHotmartAccessToken();
+
+//   const headers = {
+//     Authorization: `Bearer ${token}`,
+//     "Content-Type": "application/json",
+//   };
+
+//   const response = (await axios.get(
+//     `https://developers.hotmart.com/payments/api/v1/sales/commissions?transaction=${transaction}`,
+//     { headers }
+//   )) as any;
+
+//   return response.data;
+// }
+
+// Create a new service sale in Conta Azul
 async function createServiceSale(saleData: any, accessToken: string) {
   try {
     const response = await axios.post(
@@ -134,8 +226,71 @@ async function createServiceSale(saleData: any, accessToken: string) {
   }
 }
 
-// Get OAuth2 access token
-async function getAccessToken(): Promise<string> {
+// Get Hotmart OAuth2 access token
+// async function getHotmartAccessToken(): Promise<string> {
+//   try {
+//     const tokenDoc = await tokensCollection.doc("hotmart").get();
+
+//     if (!tokenDoc.exists) {
+//       throw new Error("OAuth tokens not found");
+//     }
+
+//     const { access_token, expires_at } = tokenDoc.data() as {
+//       access_token: string;
+//       expires_at: number;
+//     };
+
+//     // Check if the access token is expired
+//     const currentTime = Date.now();
+
+//     if (currentTime > expires_at) {
+//       const { access_token, expires_in } =
+//         (await refreshHotmartAccessToken()) as {
+//           access_token: string;
+//           expires_in: number;
+//         };
+
+//       await tokensCollection.doc("hotmart").update({
+//         access_token: access_token,
+//         expires_at: currentTime + expires_in * 1000,
+//       });
+
+//       return access_token;
+//     }
+
+//     return access_token;
+//   } catch (error) {
+//     console.error("Error getting or refreshing access token:", error);
+//     throw new Error("Failed to retrieve or refresh access token");
+//   }
+// }
+
+// Get Hotmart OAuth2 access token
+// const refreshHotmartAccessToken = async () => {
+//   try {
+//     const headers = {
+//       Authorization: `Basic ${hotmart_basic_token}`,
+//       "Content-Type": "application/json",
+//     };
+
+//     const response = await axios.post(
+//       "https://api-sec-vlc.hotmart.com/security/oauth/token?grant_type=client_credentials",
+//       {
+//         client_id: hotmart_client_id,
+//         client_secret: hotmart_client_secret,
+//       },
+//       { headers }
+//     );
+
+//     return response.data;
+//   } catch (error) {
+//     console.error("Error refreshing Hotmart access token:", error);
+//     throw new Error("Unable to refresh Hotmart access token");
+//   }
+// };
+
+// Get Conta Azul OAuth2 access token
+async function getContaAzulAccessToken(): Promise<string> {
   try {
     const tokenDoc = await tokensCollection.doc("contaAzul").get();
 
@@ -153,7 +308,9 @@ async function getAccessToken(): Promise<string> {
     const currentTime = Date.now();
 
     if (currentTime > expires_at) {
-      const refreshedTokens = (await refreshAccessToken(refresh_token)) as {
+      const refreshedTokens = (await refreshContaAzulAccessToken(
+        refresh_token
+      )) as {
         access_token: string;
         refresh_token: string;
         expires_in: number;
@@ -175,16 +332,16 @@ async function getAccessToken(): Promise<string> {
   }
 }
 
-// Refresh OAuth2 access token
-const refreshAccessToken = async (refresh_token: string) => {
+// Refresh Conta Azul OAuth2 access token
+const refreshContaAzulAccessToken = async (refresh_token: string) => {
   try {
     const response = await axios.post(
       "https://api.contaazul.com/oauth2/token",
       {
         grant_type: "refresh_token",
         refresh_token: refresh_token,
-        client_id,
-        client_secret,
+        client_id: conta_azul_client_id,
+        client_secret: conta_azul_client_secret,
       }
     );
 
@@ -237,8 +394,9 @@ async function getCustomerIdFromBuyer(
 
   // Create a new customer when none is found
   let document = buyer.document?.replace(/\D+/g, "");
-  if (!validateCPF(document) && !validateCNPJ(document))
+  if (!validateCPF(document) && !validateCNPJ(document)) {
     document = generateCPF();
+  }
 
   const newCustomerData = {
     name: buyer.name,

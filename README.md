@@ -22,17 +22,24 @@ npm install
 Configure seu projeto
 
 ```
-firebase functions:config:set contaazul.client_id="YOUR_CLIENT_ID" \
-contaazul.client_secret="YOUR_CLIENT_SECRET" \
+firebase functions:config:set contaazul.client_id="CONTA_AZUL_CLIENT_ID" \
+contaazul.client_secret="CONTA_AZUL_CLIENT_SECRET" \
 contaazul.redirect_uri="YOUR_REDIRECT_URI" \
 contaazul.brl_account_id="CONTA_FINANCEIRA_BRL_ID" \
 contaazul.usd_account_id="CONTA_FINANCEIRA_USD_ID" \
-default_zipcode="12123-100"
-default_street="Rua Padrão"
-default_number="1"
-default_neighborhood="Bairro Padrão"
-default_city="São Paulo"
-default_state="SP"
+contaazul.affiliate_service_id="AFFILIATE_SERVICE_ID" \
+contaazul.payment_service_id="PAYMENT_PROCESSING_SERVICE_ID" \
+contaazul.streaming_service_id="STREAMING_SERVICE_ID" \
+contaazul.installment_service_id="INSTALLMENT_FEE_SERVICE_ID" \
+hotmart.client_id="HOTMART_CLIENT_ID" \
+hotmart.client_secret="HOTMART_CLIENT_SECRET" \
+hotmart.basic_token="BASIC_TOKEN" \
+default_address.zipcode="12123-100" \
+default_address.street="Rua Padrão" \
+default_address.number="1" \
+default_address.neighborhood="Bairro Padrão" \
+default_address.city="São Paulo" \
+default_address.state="SP"
 ```
 
 Deploy
