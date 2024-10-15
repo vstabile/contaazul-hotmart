@@ -7,7 +7,7 @@ const db = admin.firestore();
 const tokensCollection = db.collection("oauth_tokens");
 
 const PAYMENT_METHODS = {
-  BILLET: "BANKING_BILLET",
+  BILLET: "OTHER", // Conta Azul doesn't support BANKING_BILLET for Hotmart financial account
   PIX: "INSTANT_PAYMENT",
   DIRECT_DEBIT: "DEBIT_CARD",
   CREDIT_CARD: "CREDIT_CARD",
@@ -165,10 +165,10 @@ export const hotmartWebhook = functions.https.onRequest(async (req, res) => {
         installments: [
           {
             number: 1,
-            value: purchase.full_price.value,
+            value: purchase.full_price.value * purchase_exchange_rate, // TODO: Figure out how to subtract all transaction costs
             due_date: new Date(Number(due_date)).toISOString(),
             status: "PENDING",
-            hasBillet: purchase.payment.type === "BILLET",
+            hasBillet: false,
           },
         ],
         financial_account_id:
@@ -398,20 +398,36 @@ async function getCustomerIdFromBuyer(
     document = generateCPF();
   }
 
+  // Conta Azul does not support phone numbers with more than 11 digits
+  const phone = buyer.checkout_phone;
+  phone.slice(-11);
+
+  // Conta Azul API does not support foreign addresses
+  let address = buyer.address;
+  if (address?.country_iso !== "BR") {
+    address = {};
+  }
+
+  // Conta Azul does not accept invalid zipcodes
+  const zipcode = address?.zipcode.replace(/\D+/g, "");
+  if (zipcode && zipcode.length !== 8) {
+    address.zipcode = default_zipcode;
+  }
+
   const newCustomerData = {
     name: buyer.name,
     email: buyer.email,
     document,
     person_type: document.length > 11 ? "LEGAL" : "NATURAL",
-    business_phone: buyer.checkout_phone,
+    business_phone: phone,
     address: {
-      zip_code: buyer.address?.zipcode || default_zipcode,
-      street: buyer.address?.address || default_street,
-      number: buyer.address?.number || default_number,
-      complement: buyer.address?.complement || "",
-      neighborhood: buyer.address?.neighborhood || default_neighborhood,
-      city: buyer.address?.city || default_city,
-      state: buyer.address?.state || default_state,
+      zip_code: address?.zipcode || default_zipcode,
+      street: address?.address || default_street,
+      number: address?.number || default_number,
+      complement: address?.complement || "",
+      neighborhood: address?.neighborhood || default_neighborhood,
+      city: address?.city || default_city,
+      state: address?.state || default_state,
     },
   };
 
