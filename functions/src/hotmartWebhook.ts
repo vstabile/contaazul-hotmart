@@ -122,7 +122,7 @@ export const hotmartWebhook = functions.https.onRequest(async (req, res) => {
           accessToken
         ),
         quantity: 1,
-        value: purchase.full_price.value * purchase_exchange_rate,
+        value: purchase.price.value * purchase_exchange_rate,
       },
       // ...costs,
     ];
@@ -165,14 +165,14 @@ export const hotmartWebhook = functions.https.onRequest(async (req, res) => {
         installments: [
           {
             number: 1,
-            value: purchase.full_price.value * purchase_exchange_rate, // TODO: Figure out how to subtract all transaction costs
+            value: purchase.price.value * purchase_exchange_rate, // TODO: Figure out how to subtract all transaction costs
             due_date: new Date(Number(due_date)).toISOString(),
             status: "PENDING",
             hasBillet: false,
           },
         ],
         financial_account_id:
-          purchase.full_price.currency_value === "BRL"
+          purchase.price.currency_value === "BRL"
             ? brl_account_id
             : usd_account_id,
       },
