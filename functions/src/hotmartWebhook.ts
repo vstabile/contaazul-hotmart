@@ -393,8 +393,11 @@ async function getCustomerIdFromBuyer(
   }
 
   // Create a new customer when none is found
-  let document = buyer.document?.replace(/\D+/g, "");
-  if (!validateCPF(document) && !validateCNPJ(document)) {
+  let document = buyer.document;
+  if (
+    typeof document !== "string" ||
+    (!validateCPF(document) && !validateCNPJ(document))
+  ) {
     document = generateCPF();
   }
 
@@ -409,7 +412,7 @@ async function getCustomerIdFromBuyer(
   }
 
   // Conta Azul does not accept invalid zipcodes
-  const zipcode = address?.zipcode.replace(/\D+/g, "");
+  const zipcode = address?.zipcode?.replace(/\D+/g, "");
   if (zipcode && zipcode.length !== 8) {
     address.zipcode = default_zipcode;
   }

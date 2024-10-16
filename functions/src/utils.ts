@@ -1,6 +1,6 @@
 export function validateCPF(cpf: string): boolean {
   // Remove non-numeric characters (if CPF is formatted with dots and dashes)
-  cpf = cpf.replace(/[^\d]/g, "");
+  cpf = cpf.replace(/\D+/g, "");
 
   // CPF must have exactly 11 digits
   if (cpf.length !== 11) return false;
@@ -34,7 +34,7 @@ export function validateCPF(cpf: string): boolean {
 
 export function validateCNPJ(cnpj: string): boolean {
   // Remove non-numeric characters (if CNPJ is formatted with dots, slashes, and dashes)
-  cnpj = cnpj.replace(/[^\d]/g, "");
+  cnpj = cnpj.replace(/\D+/g, "");
 
   // CNPJ must have exactly 14 digits
   if (cnpj.length !== 14) return false;
