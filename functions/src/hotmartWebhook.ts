@@ -123,6 +123,7 @@ export const hotmartWebhook = functions.https.onRequest(async (req, res) => {
         ),
         quantity: 1,
         value: purchase.price.value * purchase_exchange_rate,
+        description: `Hotmart Transaction: ${purchase.transaction}`,
       },
       // ...costs,
     ];
