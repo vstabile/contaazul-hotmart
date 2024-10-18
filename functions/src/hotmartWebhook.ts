@@ -403,8 +403,8 @@ async function getCustomerIdFromBuyer(
   }
 
   // Conta Azul does not support phone numbers with more than 11 digits
-  const phone = buyer.checkout_phone;
-  phone.slice(-11);
+  let phone = buyer.checkout_phone;
+  phone = phone.slice(-11);
 
   // Conta Azul API does not support foreign addresses
   let address = buyer.address;
@@ -418,11 +418,13 @@ async function getCustomerIdFromBuyer(
     address.zipcode = default_zipcode;
   }
 
-  const newCustomerData = {
+  const person_type = document.length > 11 ? "LEGAL" : "NATURAL";
+
+  let newCustomerData: any = {
     name: buyer.name,
     email: buyer.email,
     document,
-    person_type: document.length > 11 ? "LEGAL" : "NATURAL",
+    person_type,
     business_phone: phone,
     address: {
       zip_code: address?.zipcode || default_zipcode,
@@ -434,6 +436,13 @@ async function getCustomerIdFromBuyer(
       state: address?.state || default_state,
     },
   };
+
+  if (person_type === "LEGAL") {
+    newCustomerData = {
+      ...newCustomerData,
+      company_name: buyer.name,
+    };
+  }
 
   try {
     const createCustomerResponse = (await axios.post(
