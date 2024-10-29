@@ -429,7 +429,7 @@ async function getCustomerIdFromBuyer(
     address: {
       zip_code: address?.zipcode || default_zipcode,
       street: address?.address || default_street,
-      number: address?.number || default_number,
+      number: address?.number.slice(-10) || default_number,
       complement: address?.complement || "",
       neighborhood: address?.neighborhood || default_neighborhood,
       city: address?.city || default_city,
