@@ -404,7 +404,7 @@ async function getCustomerIdFromBuyer(
 
   // Conta Azul does not support phone numbers with more than 11 digits
   let phone = buyer.checkout_phone;
-  phone = phone.slice(-11);
+  phone = phone?.slice(-11);
 
   // Conta Azul API does not support foreign addresses
   let address = buyer.address;
@@ -429,7 +429,7 @@ async function getCustomerIdFromBuyer(
     address: {
       zip_code: address?.zipcode || default_zipcode,
       street: address?.address || default_street,
-      number: address?.number.slice(-10) || default_number,
+      number: address?.number?.slice(-10) || default_number,
       complement: address?.complement || "",
       neighborhood: address?.neighborhood || default_neighborhood,
       city: address?.city || default_city,
